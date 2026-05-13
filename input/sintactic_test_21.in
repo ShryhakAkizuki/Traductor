@@ -1,0 +1,17 @@
+mut miObjeto = {
+    metodo() {
+        consola.escribir('Hola mundo');
+    }
+};
+
+miObjeto.metodo(); // 'Hola mundo'
+
+miObjeto['metodo'](); // 'Hola mundo'
+
+mut miObjeto = {
+    propiedad: 'valor'
+};
+
+consola.escribir(miObjeto.propiedad); // 'valor'
+
+consola.escribir(miObjeto['propiedad']); // 'valor'
