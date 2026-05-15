@@ -17,6 +17,12 @@ grammar EsJs;
 //  PARSER
 // ══════════════════════════════════════════════════════════
 
+// ══════════════════════════════════════════════════════════
+//  GRUPO 1 (Persona 1) - ESTRUCTURA BASE Y CONSOLA
+//  Reglas: s, instruccion, bloque, sentenciaVacia, sentenciaConsola,
+//  metodoConsola, eos
+// ══════════════════════════════════════════════════════════
+
 s
     : instruccion* EOF
     ;
@@ -40,6 +46,13 @@ instruccion
 bloque
     : TKN_opening_key instruccion* TKN_closing_key
     ;
+
+// ══════════════════════════════════════════════════════════
+//  GRUPO 2  - DECLARACIONES, FUNCIONES Y SALTOS
+//  Reglas: sentenciaVariable, listaDeclaracionVariable, modificadorVariable,
+//  declaracionVariable, declaracionFuncion, listaParametros, funcionFlecha,
+//  sentenciaContinuar, sentenciaRomper, sentenciaRetornar, sentenciaIntentar
+// ══════════════════════════════════════════════════════════
 
 // ── Variables ────────────────────────────────────────────
 
@@ -125,6 +138,12 @@ sentenciaIntentar
     : TKN_intentar bloque TKN_capturar (TKN_opening_par identificador? TKN_closing_par)? bloque
     ;
 
+// ══════════════════════════════════════════════════════════
+//  GRUPO 3 - CONTROL DE FLUJO Y SELECCIÓN
+//  Reglas: sentenciaSi, sentenciaIterar, inicioFor, condicionFor,
+//  actualizacionFor, sentenciaElegir, bloqueCaso, casoSTMT, casoDefecto
+// ══════════════════════════════════════════════════════════
+
 // ── Consola ──────────────────────────────────────────────
 
 sentenciaConsola
@@ -140,6 +159,18 @@ metodoConsola
     | TKN_limpiar
     | TKN_tabla
     ;
+
+// ══════════════════════════════════════════════════════════
+//  GRUPO 4  - EXPRESIONES, LITERALES Y ACCESOS
+//  Reglas: sentenciaExpresion, secuenciaExpresiones, expresionUnica,
+//  restoCrear, nombreAccesible, tipoMetodoNumero, constanteNumero,
+//  metodoNumero, tipoMetodoMate, constanteMate, metodoMate, tipoNativo,
+//  argumentos, listaArgumentos, argumento, operadorMultiplicacion,
+//  operadorAdicion, operadorRelacional, operadorIgualdad,
+//  operadorAsignacion, operadorUnario, identificador, literal,
+//  arregloLiteral, listaElementos, elemento, objetoLiteral,
+//  listaPropiedades, propiedad, nombrePropiedad
+// ══════════════════════════════════════════════════════════
 
 // ── Expresiones ──────────────────────────────────────────
 
