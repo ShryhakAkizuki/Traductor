@@ -1,7 +1,4 @@
-# División de la gramática `EsJs.g4` para 4 personas
-
-## Objetivo
-Repartir las reglas para que 4 personas puedan traducir la gramática a Python sin duplicar trabajo y con una carga parecida en dificultad real, no solo en número de reglas.
+# División de la gramática para traducción a Python
 
 ## Criterio de reparto
 Se priorizó la **complejidad de traducción a Python**. Eso significa que no se midió solo cuántas reglas tiene cada grupo, sino cuánto suele costar implementar cada bloque:
