@@ -8,9 +8,6 @@ public abstract class ExpressionVisitor extends  EsJsBaseVisitor<String> {
     //Flags para importar librerias
     protected boolean needsMathLib            = false;
     protected boolean needsRandomLib          = false;
-    protected boolean needsSysLib             = false;
-    protected boolean needsOsLib              = false;
-
     protected boolean needsIndefinidoSentinel = false;
 
     protected int   indentLevel = 0;
