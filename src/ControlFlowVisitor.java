@@ -12,6 +12,8 @@ public abstract class ControlFlowVisitor extends ExpressionVisitor {
         }
     }
 
+    // ------------------------- Funciones -------------------------
+
     private String emitInstructions(List<EsJsParser.InstruccionContext> instructions) {
         StringBuilder output = new StringBuilder();
         for (EsJsParser.InstruccionContext instruction : instructions) {
@@ -106,6 +108,8 @@ public abstract class ControlFlowVisitor extends ExpressionVisitor {
         if (conditions.isEmpty()) return "True";
         return String.join(" or ", conditions);
     }
+
+    // ------------------------- Overrides -------------------------
 
     @Override
     public String visitSentenciaSi(EsJsParser.SentenciaSiContext ctx) {

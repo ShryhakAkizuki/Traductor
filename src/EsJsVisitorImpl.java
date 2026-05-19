@@ -49,14 +49,12 @@ public class EsJsVisitorImpl extends ControlFlowVisitor {
     private String generateImports() {
         StringBuilder imports = new StringBuilder();
         
-        if (needsSysLib) {
-            imports.append("import sys\n");
-        }
-        
-        if (imports.length() > 0) {
-            imports.append("\n");
-        }
-        
+        if (needsSysLib)                imports.append("import sys\n");
+        if (needsMathLib)               imports.append("import math\n");
+        if (needsRandomLib)             imports.append("import random\n");
+        if (needsIndefinidoSentinel)    imports.append("_indefinido = object()\n\n");
+        if (!imports.isEmpty())         imports.append("\n");
+
         return imports.toString();
     }
     
@@ -227,31 +225,33 @@ public class EsJsVisitorImpl extends ControlFlowVisitor {
         if (ctx == null) {
             return "";
         }
-        
+
         try {
             String metodo = visit(ctx.metodoConsola());
             String argumentos = visit(ctx.argumentos());
-            
+
+
+
             if (metodo == null || argumentos == null) {
                 logError("Método o argumentos nulos en sentenciaConsola", ctx);
                 return "";
             }
-            
+
             // Remover paréntesis de argumentos para procesarlos
             String args = "";
             if (argumentos.length() >= 2) {
                 args = argumentos.substring(1, argumentos.length() - 1);
             }
-            
+
             StringBuilder output = new StringBuilder();
             output.append(indent());
-            
+
             switch (metodo) {
                 case "escribir":
                     // consola.escribir(...) → print(...)
                     output.append("print(").append(args).append(")");
                     break;
-                    
+
                 case "error":
                     // consola.error(...) → print(..., file=sys.stderr)
                     needsSysLib = true;
@@ -261,12 +261,12 @@ public class EsJsVisitorImpl extends ControlFlowVisitor {
                         output.append("print(").append(args).append(", file=sys.stderr)");
                     }
                     break;
-                    
+
                 case "info":
                     // consola.info(...) → print(...)
                     output.append("print(").append(args).append(")");
                     break;
-                    
+
                 case "afirmar":
                     // consola.afirmar(...) → assert ...
                     if (args.isEmpty()) {
@@ -275,32 +275,32 @@ public class EsJsVisitorImpl extends ControlFlowVisitor {
                         output.append("assert ").append(args);
                     }
                     break;
-                    
+
                 case "limpiar":
                     // consola.limpiar() → print('\033[2J\033[H', end='')
                     output.append("print('\\033[2J\\033[H', end='')");
                     break;
-                    
+
                 case "tabla":
                     // consola.tabla(...) → print(...) (simplificado por ahora)
                     output.append("print(").append(args).append(")");
                     break;
-                    
+
                 case "agrupar":
                     // consola.agrupar(...) → print(...) (simplificado por ahora)
                     output.append("print(").append(args).append(")");
                     break;
-                    
+
                 default:
                     // Método desconocido, usar print por defecto
                     logError("Método de consola desconocido: " + metodo, ctx);
                     output.append("print(").append(args).append(")");
                     break;
             }
-            
+
             output.append("\n");
             return output.toString();
-            
+
         } catch (Exception e) {
             logError("Error procesando sentenciaConsola: " + e.getMessage(), ctx);
             return "";
@@ -322,171 +322,7 @@ public class EsJsVisitorImpl extends ControlFlowVisitor {
         return ctx.getText();
     }
     
-    /**
-     * Regla: argumentos
-     * Retorna los argumentos entre paréntesis.
-     * 
-     * @param ctx Contexto del parser
-     * @return Argumentos con paréntesis
-     */
-    @Override
-    public String visitArgumentos(EsJsParser.ArgumentosContext ctx) {
-        if (ctx == null) {
-            return "()";
-        }
-        
-        try {
-            if (ctx.listaArgumentos() == null) {
-                return "()";
-            }
-            return "(" + visit(ctx.listaArgumentos()) + ")";
-        } catch (Exception e) {
-            logError("Error procesando argumentos: " + e.getMessage(), ctx);
-            return "()";
-        }
-    }
-    
-    /**
-     * Regla: listaArgumentos
-     * Procesa la lista de argumentos separados por comas.
-     * 
-     * @param ctx Contexto del parser
-     * @return Argumentos separados por comas
-     */
-    @Override
-    public String visitListaArgumentos(EsJsParser.ListaArgumentosContext ctx) {
-        if (ctx == null) {
-            return "";
-        }
-        
-        try {
-            StringBuilder output = new StringBuilder();
-            
-            List<EsJsParser.ArgumentoContext> argumentos = ctx.argumento();
-            if (argumentos != null) {
-                for (int i = 0; i < argumentos.size(); i++) {
-                    if (i > 0) {
-                        output.append(", ");
-                    }
-                    String arg = visit(argumentos.get(i));
-                    if (arg != null) {
-                        output.append(arg);
-                    }
-                }
-            }
-            
-            return output.toString();
-        } catch (Exception e) {
-            logError("Error procesando listaArgumentos: " + e.getMessage(), ctx);
-            return "";
-        }
-    }
-    
-    /**
-     * Regla: argumento
-     * Procesa un argumento individual (con o sin spread).
-     * 
-     * @param ctx Contexto del parser
-     * @return Argumento (con * si tiene spread)
-     */
-    @Override
-    public String visitArgumento(EsJsParser.ArgumentoContext ctx) {
-        if (ctx == null) {
-            return "";
-        }
-        
-        try {
-            String prefix = ctx.TKN_spread() != null ? "*" : "";
-            String expr = visit(ctx.expresionUnica());
-            return prefix + (expr != null ? expr : "");
-        } catch (Exception e) {
-            logError("Error procesando argumento: " + e.getMessage(), ctx);
-            return "";
-        }
-    }
-    
-    // ==================== LITERALES BÁSICOS ====================
-    
-    /**
-     * Regla: literal
-     * Traduce literales básicos de EsJs a Python.
-     * 
-     * @param ctx Contexto del parser
-     * @return Literal en Python
-     */
-    @Override
-    public String visitLiteral(EsJsParser.LiteralContext ctx) {
-        if (ctx == null) {
-            return "";
-        }
-        
-        try {
-            if (ctx.TKN_verdadero() != null) return "True";
-            if (ctx.TKN_falso() != null) return "False";
-            if (ctx.TKN_nulo() != null) return "None";
-            if (ctx.TKN_indefinido() != null) return "None";
-            if (ctx.TKN_Infinito() != null) return "float('inf')";
-            if (ctx.TKN_NuN() != null) return "float('nan')";
-            if (ctx.TKN_str() != null) return ctx.getText();
-            if (ctx.TKN_num() != null) return ctx.getText();
-            
-            return ctx.getText();
-        } catch (Exception e) {
-            logError("Error procesando literal: " + e.getMessage(), ctx);
-            return "";
-        }
-    }
-    
-    /**
-     * Regla: identificador
-     * Retorna el identificador tal cual.
-     * 
-     * @param ctx Contexto del parser
-     * @return Identificador
-     */
-    @Override
-    public String visitIdentificador(EsJsParser.IdentificadorContext ctx) {
-        if (ctx == null) {
-            return "";
-        }
-        return ctx.getText();
-    }
-    
-    /**
-     * Regla: expresionUnica
-     * Implementación básica para el Grupo 1.
-     * Solo maneja literales e identificadores simples.
-     * 
-     * @param ctx Contexto del parser
-     * @return Expresión en Python
-     */
-    @Override
-    public String visitExpresionUnica(EsJsParser.ExpresionUnicaContext ctx) {
-        if (ctx == null) {
-            return "";
-        }
-        
-        try {
-            // Para el Grupo 1, solo necesitamos literales e identificadores básicos
-            
-            if (ctx.literal() != null) {
-                return visit(ctx.literal());
-            }
-            
-            if (ctx.identificador() != null && ctx.expresionUnica().isEmpty()) {
-                return visit(ctx.identificador());
-            }
-            
-            // Para expresiones más complejas, retornar el texto tal cual
-            // (se implementarán en el Grupo 4)
-            return ctx.getText();
-            
-        } catch (Exception e) {
-            logError("Error procesando expresionUnica: " + e.getMessage(), ctx);
-            return ctx.getText();
-        }
-    }
-    
+
     // ==================== MÉTODOS HEREDADOS ====================
     
     // defaultResult() y aggregateResult() se heredan de EsJsBaseVisitor
