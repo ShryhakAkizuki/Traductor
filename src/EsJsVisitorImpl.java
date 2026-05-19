@@ -11,8 +11,6 @@ import java.util.*;
  * - flushPendientes() de ExpressionVisitor
  * - Variables compartidas: indentLevel, DefinicionesPendientes
  *
- * @author Equipo de Desarrollo
- * @version 1.0.0
  */
 public class EsJsVisitorImpl extends ControlFlowVisitor {
     
@@ -307,12 +305,12 @@ public class EsJsVisitorImpl extends ControlFlowVisitor {
                     break;
 
                 case "tabla":
-                    // consola.tabla(...) → print(...) (simplificado por ahora)
+                    // consola.tabla(...) → print(...)
                     output.append("print(").append(args).append(")");
                     break;
 
                 case "agrupar":
-                    // consola.agrupar(...) → print(...) (simplificado por ahora)
+                    // consola.agrupar(...) → print(...)
                     output.append("print(").append(args).append(")");
                     break;
 
@@ -417,5 +415,4 @@ public class EsJsVisitorImpl extends ControlFlowVisitor {
     
     // defaultResult() y aggregateResult() se heredan de EsJsBaseVisitor
     // a través de ExpressionVisitor y ControlFlowVisitor
-    // No es necesario sobrescribirlos aquí
 }
