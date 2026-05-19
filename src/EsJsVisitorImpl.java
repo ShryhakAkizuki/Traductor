@@ -1,57 +1,44 @@
 import org.antlr.v4.runtime.tree.ParseTree;
-import org.antlr.v4.runtime.tree.TerminalNode;
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Implementación del Visitor para traducir EsJs a Python.
  * Grupo 1: Estructura Base y Consola
- * 
+ *
+ * Extiende de ControlFlowVisitor para reutilizar:
+ * - indent() de ExpressionVisitor
+ * - isToken() de ExpressionVisitor
+ * - flushPendientes() de ExpressionVisitor
+ * - Variables compartidas: indentLevel, DefinicionesPendientes
+ *
  * @author Equipo de Desarrollo
  * @version 1.0.0
  */
-public class EsJsVisitorImpl extends EsJsBaseVisitor<String> {
+public class EsJsVisitorImpl extends ControlFlowVisitor {
     
-    // ==================== CONSTANTES ====================
+    // ==================== VARIABLES ADICIONALES ====================
     
-    /** Unidad de indentación (4 espacios) */
-    private static final String INDENT_UNIT = "    ";
-    
-    // ==================== VARIABLES DE ESTADO ====================
-    
-    /** Nivel actual de indentación */
-    private int indentLevel = 0;
-    
-    /** Flags para imports necesarios */
+    /** Flag adicional para imports de sys (stderr) */
     private boolean needsSysLib = false;
     
-    /** Definiciones pendientes (para futuros grupos) */
-    private final List<String> pendingDefinitions = new ArrayList<>();
+    /** Flag adicional para imports de os (limpiar consola) */
+    private boolean needsOsLib = false;
     
     /** Contador de errores encontrados */
     private int errorCount = 0;
     
     // ==================== MÉTODOS AUXILIARES ====================
     
-    /**
-     * Genera la indentación actual.
-     * @return String con espacios de indentación
-     */
-    private String indent() {
-        return INDENT_UNIT.repeat(Math.max(0, indentLevel));
-    }
+    // Nota: indent(), isToken(), flushPendientes() se heredan de ExpressionVisitor
+    // Nota: indentLevel y DefinicionesPendientes se heredan de ExpressionVisitor
     
     /**
-     * Verifica si un nodo es un token específico.
+     * Verifica si un nodo es un token específico (sobrecarga para compatibilidad).
      * @param node Nodo a verificar
      * @param type Tipo de token esperado
      * @return true si el nodo es del tipo especificado
      */
-    private boolean isToken(ParseTree node, int type) {
-        if (node instanceof TerminalNode) {
-            return ((TerminalNode) node).getSymbol().getType() == type;
-        }
-        return false;
+    private boolean isTokenLocal(ParseTree node, int type) {
+        return isToken(node, type); // Usa el método heredado
     }
     
     /**
@@ -72,23 +59,8 @@ public class EsJsVisitorImpl extends EsJsBaseVisitor<String> {
         return imports.toString();
     }
     
-    /**
-     * Obtiene y limpia las definiciones pendientes.
-     * @return String con todas las definiciones acumuladas
-     */
-    private String flushPendingDefinitions() {
-        if (pendingDefinitions.isEmpty()) {
-            return "";
-        }
-        
-        StringBuilder output = new StringBuilder();
-        for (String definition : pendingDefinitions) {
-            output.append(definition);
-        }
-        pendingDefinitions.clear();
-        
-        return output.toString();
-    }
+    // Nota: flushPendingDefinitions() se reemplaza por flushPendientes() heredado
+    // que usa DefinicionesPendientes en lugar de pendingDefinitions
     
     /**
      * Registra un error de traducción.
@@ -144,8 +116,8 @@ public class EsJsVisitorImpl extends EsJsBaseVisitor<String> {
                 }
             }
             
-            // Obtener definiciones pendientes (para futuros grupos)
-            String definitions = flushPendingDefinitions();
+            // Obtener definiciones pendientes (usa el método heredado de ExpressionVisitor)
+            String definitions = flushPendientes();
             
             // Generar imports
             String imports = generateImports();
@@ -514,27 +486,9 @@ public class EsJsVisitorImpl extends EsJsBaseVisitor<String> {
         }
     }
     
-    // ==================== MÉTODOS DEFAULT ====================
+    // ==================== MÉTODOS HEREDADOS ====================
     
-    /**
-     * Método por defecto para nodos no implementados.
-     */
-    @Override
-    protected String defaultResult() {
-        return "";
-    }
-    
-    /**
-     * Método para agregar resultados de hijos.
-     */
-    @Override
-    protected String aggregateResult(String aggregate, String nextResult) {
-        if (aggregate == null) {
-            return nextResult != null ? nextResult : "";
-        }
-        if (nextResult == null || nextResult.isEmpty()) {
-            return aggregate;
-        }
-        return aggregate + nextResult;
-    }
+    // defaultResult() y aggregateResult() se heredan de EsJsBaseVisitor
+    // a través de ExpressionVisitor y ControlFlowVisitor
+    // No es necesario sobrescribirlos aquí
 }
