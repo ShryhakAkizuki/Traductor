@@ -1,0 +1,540 @@
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.TerminalNode;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Implementación del Visitor para traducir EsJs a Python.
+ * Grupo 1: Estructura Base y Consola
+ * 
+ * @author Equipo de Desarrollo
+ * @version 1.0.0
+ */
+public class EsJsVisitorImpl extends EsJsBaseVisitor<String> {
+    
+    // ==================== CONSTANTES ====================
+    
+    /** Unidad de indentación (4 espacios) */
+    private static final String INDENT_UNIT = "    ";
+    
+    // ==================== VARIABLES DE ESTADO ====================
+    
+    /** Nivel actual de indentación */
+    private int indentLevel = 0;
+    
+    /** Flags para imports necesarios */
+    private boolean needsSysLib = false;
+    
+    /** Definiciones pendientes (para futuros grupos) */
+    private final List<String> pendingDefinitions = new ArrayList<>();
+    
+    /** Contador de errores encontrados */
+    private int errorCount = 0;
+    
+    // ==================== MÉTODOS AUXILIARES ====================
+    
+    /**
+     * Genera la indentación actual.
+     * @return String con espacios de indentación
+     */
+    private String indent() {
+        return INDENT_UNIT.repeat(Math.max(0, indentLevel));
+    }
+    
+    /**
+     * Verifica si un nodo es un token específico.
+     * @param node Nodo a verificar
+     * @param type Tipo de token esperado
+     * @return true si el nodo es del tipo especificado
+     */
+    private boolean isToken(ParseTree node, int type) {
+        if (node instanceof TerminalNode) {
+            return ((TerminalNode) node).getSymbol().getType() == type;
+        }
+        return false;
+    }
+    
+    /**
+     * Genera los imports necesarios basándose en los flags.
+     * @return String con las declaraciones import
+     */
+    private String generateImports() {
+        StringBuilder imports = new StringBuilder();
+        
+        if (needsSysLib) {
+            imports.append("import sys\n");
+        }
+        
+        if (imports.length() > 0) {
+            imports.append("\n");
+        }
+        
+        return imports.toString();
+    }
+    
+    /**
+     * Obtiene y limpia las definiciones pendientes.
+     * @return String con todas las definiciones acumuladas
+     */
+    private String flushPendingDefinitions() {
+        if (pendingDefinitions.isEmpty()) {
+            return "";
+        }
+        
+        StringBuilder output = new StringBuilder();
+        for (String definition : pendingDefinitions) {
+            output.append(definition);
+        }
+        pendingDefinitions.clear();
+        
+        return output.toString();
+    }
+    
+    /**
+     * Registra un error de traducción.
+     * @param message Mensaje de error
+     * @param ctx Contexto donde ocurrió el error
+     */
+    private void logError(String message, ParseTree ctx) {
+        errorCount++;
+        System.err.println("ERROR: " + message);
+        if (ctx != null) {
+            System.err.println("  Contexto: " + ctx.getText());
+        }
+    }
+    
+    /**
+     * Obtiene el número de errores encontrados.
+     * @return Cantidad de errores
+     */
+    public int getErrorCount() {
+        return errorCount;
+    }
+    
+    // ==================== GRUPO 1: ESTRUCTURA BASE ====================
+    
+    /**
+     * Regla: s
+     * Punto de entrada del programa.
+     * 
+     * Gramática: s : instruccion* EOF
+     * 
+     * @param ctx Contexto del parser
+     * @return Programa Python completo
+     */
+    @Override
+    public String visitS(EsJsParser.SContext ctx) {
+        if (ctx == null) {
+            logError("Contexto nulo en visitS", null);
+            return "";
+        }
+        
+        StringBuilder output = new StringBuilder();
+        
+        try {
+            // Procesar todas las instrucciones
+            List<EsJsParser.InstruccionContext> instrucciones = ctx.instruccion();
+            
+            if (instrucciones != null) {
+                for (EsJsParser.InstruccionContext instruccion : instrucciones) {
+                    String code = visit(instruccion);
+                    if (code != null && !code.isBlank()) {
+                        output.append(code);
+                    }
+                }
+            }
+            
+            // Obtener definiciones pendientes (para futuros grupos)
+            String definitions = flushPendingDefinitions();
+            
+            // Generar imports
+            String imports = generateImports();
+            
+            // Construir programa completo: imports + definiciones + código
+            StringBuilder program = new StringBuilder();
+            program.append(imports);
+            program.append(definitions);
+            program.append(output);
+            
+            return program.toString();
+            
+        } catch (Exception e) {
+            logError("Error procesando programa: " + e.getMessage(), ctx);
+            return "# Error: No se pudo transpilar el programa\n";
+        }
+    }
+    
+    /**
+     * Regla: instruccion
+     * Delega a las reglas específicas de cada tipo de instrucción.
+     * 
+     * @param ctx Contexto del parser
+     * @return Código Python de la instrucción
+     */
+    @Override
+    public String visitInstruccion(EsJsParser.InstruccionContext ctx) {
+        if (ctx == null) {
+            return "";
+        }
+        
+        try {
+            // Delegar al hijo específico
+            return visitChildren(ctx);
+        } catch (Exception e) {
+            logError("Error procesando instrucción: " + e.getMessage(), ctx);
+            return "";
+        }
+    }
+    
+    /**
+     * Regla: bloque
+     * Convierte bloques con llaves a bloques con indentación Python.
+     * 
+     * @param ctx Contexto del parser
+     * @return Código Python del bloque con indentación
+     */
+    @Override
+    public String visitBloque(EsJsParser.BloqueContext ctx) {
+        if (ctx == null) {
+            return "";
+        }
+        
+        StringBuilder output = new StringBuilder();
+        
+        try {
+            // NO incrementar indentLevel aquí
+            // Los bloques en EsJs son solo agrupadores, no crean scope en Python
+            
+            List<EsJsParser.InstruccionContext> instrucciones = ctx.instruccion();
+            
+            if (instrucciones == null || instrucciones.isEmpty()) {
+                // Bloque vacío → ignorar (no generar pass)
+                return "";
+            } else {
+                // Procesar cada instrucción sin cambiar indentación
+                for (EsJsParser.InstruccionContext instruccion : instrucciones) {
+                    String code = visit(instruccion);
+                    if (code != null && !code.isBlank()) {
+                        output.append(code);
+                    }
+                }
+            }
+            
+        } catch (Exception e) {
+            logError("Error procesando bloque: " + e.getMessage(), ctx);
+        }
+        
+        return output.toString();
+    }
+    
+    /**
+     * Regla: sentenciaVacia
+     * En Python no se necesita, se ignora.
+     * 
+     * @param ctx Contexto del parser
+     * @return String vacío (se ignora)
+     */
+    @Override
+    public String visitSentenciaVacia(EsJsParser.SentenciaVaciaContext ctx) {
+        // Ignorar sentencias vacías en Python
+        return "";
+    }
+    
+    // ==================== GRUPO 1: CONSOLA ====================
+    
+    /**
+     * Regla: sentenciaConsola
+     * Traduce llamadas a consola.metodo() a su equivalente Python.
+     * 
+     * @param ctx Contexto del parser
+     * @return Código Python de la sentencia de consola
+     */
+    @Override
+    public String visitSentenciaConsola(EsJsParser.SentenciaConsolaContext ctx) {
+        if (ctx == null) {
+            return "";
+        }
+        
+        try {
+            String metodo = visit(ctx.metodoConsola());
+            String argumentos = visit(ctx.argumentos());
+            
+            if (metodo == null || argumentos == null) {
+                logError("Método o argumentos nulos en sentenciaConsola", ctx);
+                return "";
+            }
+            
+            // Remover paréntesis de argumentos para procesarlos
+            String args = "";
+            if (argumentos.length() >= 2) {
+                args = argumentos.substring(1, argumentos.length() - 1);
+            }
+            
+            StringBuilder output = new StringBuilder();
+            output.append(indent());
+            
+            switch (metodo) {
+                case "escribir":
+                    // consola.escribir(...) → print(...)
+                    output.append("print(").append(args).append(")");
+                    break;
+                    
+                case "error":
+                    // consola.error(...) → print(..., file=sys.stderr)
+                    needsSysLib = true;
+                    if (args.isEmpty()) {
+                        output.append("print(file=sys.stderr)");
+                    } else {
+                        output.append("print(").append(args).append(", file=sys.stderr)");
+                    }
+                    break;
+                    
+                case "info":
+                    // consola.info(...) → print(...)
+                    output.append("print(").append(args).append(")");
+                    break;
+                    
+                case "afirmar":
+                    // consola.afirmar(...) → assert ...
+                    if (args.isEmpty()) {
+                        output.append("assert True");
+                    } else {
+                        output.append("assert ").append(args);
+                    }
+                    break;
+                    
+                case "limpiar":
+                    // consola.limpiar() → print('\033[2J\033[H', end='')
+                    output.append("print('\\033[2J\\033[H', end='')");
+                    break;
+                    
+                case "tabla":
+                    // consola.tabla(...) → print(...) (simplificado por ahora)
+                    output.append("print(").append(args).append(")");
+                    break;
+                    
+                case "agrupar":
+                    // consola.agrupar(...) → print(...) (simplificado por ahora)
+                    output.append("print(").append(args).append(")");
+                    break;
+                    
+                default:
+                    // Método desconocido, usar print por defecto
+                    logError("Método de consola desconocido: " + metodo, ctx);
+                    output.append("print(").append(args).append(")");
+                    break;
+            }
+            
+            output.append("\n");
+            return output.toString();
+            
+        } catch (Exception e) {
+            logError("Error procesando sentenciaConsola: " + e.getMessage(), ctx);
+            return "";
+        }
+    }
+    
+    /**
+     * Regla: metodoConsola
+     * Retorna el nombre del método de consola.
+     * 
+     * @param ctx Contexto del parser
+     * @return Nombre del método
+     */
+    @Override
+    public String visitMetodoConsola(EsJsParser.MetodoConsolaContext ctx) {
+        if (ctx == null) {
+            return "";
+        }
+        return ctx.getText();
+    }
+    
+    /**
+     * Regla: argumentos
+     * Retorna los argumentos entre paréntesis.
+     * 
+     * @param ctx Contexto del parser
+     * @return Argumentos con paréntesis
+     */
+    @Override
+    public String visitArgumentos(EsJsParser.ArgumentosContext ctx) {
+        if (ctx == null) {
+            return "()";
+        }
+        
+        try {
+            if (ctx.listaArgumentos() == null) {
+                return "()";
+            }
+            return "(" + visit(ctx.listaArgumentos()) + ")";
+        } catch (Exception e) {
+            logError("Error procesando argumentos: " + e.getMessage(), ctx);
+            return "()";
+        }
+    }
+    
+    /**
+     * Regla: listaArgumentos
+     * Procesa la lista de argumentos separados por comas.
+     * 
+     * @param ctx Contexto del parser
+     * @return Argumentos separados por comas
+     */
+    @Override
+    public String visitListaArgumentos(EsJsParser.ListaArgumentosContext ctx) {
+        if (ctx == null) {
+            return "";
+        }
+        
+        try {
+            StringBuilder output = new StringBuilder();
+            
+            List<EsJsParser.ArgumentoContext> argumentos = ctx.argumento();
+            if (argumentos != null) {
+                for (int i = 0; i < argumentos.size(); i++) {
+                    if (i > 0) {
+                        output.append(", ");
+                    }
+                    String arg = visit(argumentos.get(i));
+                    if (arg != null) {
+                        output.append(arg);
+                    }
+                }
+            }
+            
+            return output.toString();
+        } catch (Exception e) {
+            logError("Error procesando listaArgumentos: " + e.getMessage(), ctx);
+            return "";
+        }
+    }
+    
+    /**
+     * Regla: argumento
+     * Procesa un argumento individual (con o sin spread).
+     * 
+     * @param ctx Contexto del parser
+     * @return Argumento (con * si tiene spread)
+     */
+    @Override
+    public String visitArgumento(EsJsParser.ArgumentoContext ctx) {
+        if (ctx == null) {
+            return "";
+        }
+        
+        try {
+            String prefix = ctx.TKN_spread() != null ? "*" : "";
+            String expr = visit(ctx.expresionUnica());
+            return prefix + (expr != null ? expr : "");
+        } catch (Exception e) {
+            logError("Error procesando argumento: " + e.getMessage(), ctx);
+            return "";
+        }
+    }
+    
+    // ==================== LITERALES BÁSICOS ====================
+    
+    /**
+     * Regla: literal
+     * Traduce literales básicos de EsJs a Python.
+     * 
+     * @param ctx Contexto del parser
+     * @return Literal en Python
+     */
+    @Override
+    public String visitLiteral(EsJsParser.LiteralContext ctx) {
+        if (ctx == null) {
+            return "";
+        }
+        
+        try {
+            if (ctx.TKN_verdadero() != null) return "True";
+            if (ctx.TKN_falso() != null) return "False";
+            if (ctx.TKN_nulo() != null) return "None";
+            if (ctx.TKN_indefinido() != null) return "None";
+            if (ctx.TKN_Infinito() != null) return "float('inf')";
+            if (ctx.TKN_NuN() != null) return "float('nan')";
+            if (ctx.TKN_str() != null) return ctx.getText();
+            if (ctx.TKN_num() != null) return ctx.getText();
+            
+            return ctx.getText();
+        } catch (Exception e) {
+            logError("Error procesando literal: " + e.getMessage(), ctx);
+            return "";
+        }
+    }
+    
+    /**
+     * Regla: identificador
+     * Retorna el identificador tal cual.
+     * 
+     * @param ctx Contexto del parser
+     * @return Identificador
+     */
+    @Override
+    public String visitIdentificador(EsJsParser.IdentificadorContext ctx) {
+        if (ctx == null) {
+            return "";
+        }
+        return ctx.getText();
+    }
+    
+    /**
+     * Regla: expresionUnica
+     * Implementación básica para el Grupo 1.
+     * Solo maneja literales e identificadores simples.
+     * 
+     * @param ctx Contexto del parser
+     * @return Expresión en Python
+     */
+    @Override
+    public String visitExpresionUnica(EsJsParser.ExpresionUnicaContext ctx) {
+        if (ctx == null) {
+            return "";
+        }
+        
+        try {
+            // Para el Grupo 1, solo necesitamos literales e identificadores básicos
+            
+            if (ctx.literal() != null) {
+                return visit(ctx.literal());
+            }
+            
+            if (ctx.identificador() != null && ctx.expresionUnica().isEmpty()) {
+                return visit(ctx.identificador());
+            }
+            
+            // Para expresiones más complejas, retornar el texto tal cual
+            // (se implementarán en el Grupo 4)
+            return ctx.getText();
+            
+        } catch (Exception e) {
+            logError("Error procesando expresionUnica: " + e.getMessage(), ctx);
+            return ctx.getText();
+        }
+    }
+    
+    // ==================== MÉTODOS DEFAULT ====================
+    
+    /**
+     * Método por defecto para nodos no implementados.
+     */
+    @Override
+    protected String defaultResult() {
+        return "";
+    }
+    
+    /**
+     * Método para agregar resultados de hijos.
+     */
+    @Override
+    protected String aggregateResult(String aggregate, String nextResult) {
+        if (aggregate == null) {
+            return nextResult != null ? nextResult : "";
+        }
+        if (nextResult == null || nextResult.isEmpty()) {
+            return aggregate;
+        }
+        return aggregate + nextResult;
+    }
+}
