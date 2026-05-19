@@ -174,12 +174,25 @@ public abstract class ExpressionVisitor extends  EsJsBaseVisitor<String> {
                     ? "self, " + visit(p.listaParametros()) : "self";
             def.append(indent()).append("def ").append(mName)
                     .append("(").append(mParams).append("):\n");
-            def.append(visit(p.bloque()));
+            def.append(buildBlock(p.bloque().instruccion()));
         }
 
         indentLevel = saved;
         DefinicionesPendientes.add(def.toString());
         return clsName + "()";
+    }
+
+    protected String buildBlock(List<EsJsParser.InstruccionContext> insts) {
+        StringBuilder sb = new StringBuilder();
+        indentLevel++;
+        if (insts.isEmpty()) {
+            sb.append(indent()).append("pass\n");
+        } else {
+            for (EsJsParser.InstruccionContext inst : insts)
+                sb.append(visit(inst));
+        }
+        indentLevel--;
+        return sb.toString();
     }
 
     // ------------------------- Overrides -------------------------

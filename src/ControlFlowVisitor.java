@@ -27,11 +27,7 @@ public abstract class ControlFlowVisitor extends ExpressionVisitor {
     }
 
     private String emitBlock(EsJsParser.BloqueContext ctx) {
-        indentLevel++;
-        String body = emitInstructions(ctx.instruccion());
-        if (body.isBlank()) body = indent() + "pass\n";
-        indentLevel--;
-        return body;
+        return buildBlock(ctx.instruccion());
     }
 
     private String emitForExpressions(EsJsParser.SecuenciaExpresionesContext ctx) {
