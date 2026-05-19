@@ -14,7 +14,7 @@ import java.util.*;
  * @author Equipo de Desarrollo
  * @version 1.0.0
  */
-public abstract class EsJsVisitorImpl extends ControlFlowVisitor {
+public class EsJsVisitorImpl extends ControlFlowVisitor {
     
     // ==================== VARIABLES ADICIONALES ====================
     
@@ -230,8 +230,6 @@ public abstract class EsJsVisitorImpl extends ControlFlowVisitor {
             String metodo = visit(ctx.metodoConsola());
             String argumentos = visit(ctx.argumentos());
 
-
-
             if (metodo == null || argumentos == null) {
                 logError("Método o argumentos nulos en sentenciaConsola", ctx);
                 return "";
@@ -242,6 +240,9 @@ public abstract class EsJsVisitorImpl extends ControlFlowVisitor {
             if (argumentos.length() >= 2) {
                 args = argumentos.substring(1, argumentos.length() - 1);
             }
+            
+            // Convertir concatenación de strings a f-string si es necesario
+            args = convertToFString(args);
 
             StringBuilder output = new StringBuilder();
             output.append(indent());
@@ -305,6 +306,71 @@ public abstract class EsJsVisitorImpl extends ControlFlowVisitor {
             logError("Error procesando sentenciaConsola: " + e.getMessage(), ctx);
             return "";
         }
+    }
+    
+    /**
+     * Convierte concatenación de strings con + a f-string de Python.
+     * Ejemplo: "x: " + x → f"x: {x}"
+     *
+     * @param args Argumentos originales
+     * @return Argumentos convertidos a f-string si contienen concatenación
+     */
+    private String convertToFString(String args) {
+        if (args == null || args.isEmpty()) {
+            return args;
+        }
+        
+        // Si no contiene concatenación con +, retornar tal cual
+        if (!args.contains(" + ")) {
+            return args;
+        }
+        
+        // Detectar si hay concatenación de strings
+        // Patrón: "string" + expresion o expresion + "string"
+        if (args.matches(".*\"[^\"]*\"\\s*\\+.*") || args.matches(".*\\+\\s*\"[^\"]*\".*")) {
+            // Convertir a f-string
+            StringBuilder fstring = new StringBuilder("f");
+            
+            // Dividir por + y procesar cada parte
+            String[] parts = args.split("\\s*\\+\\s*");
+            boolean firstPart = true;
+            
+            for (String part : parts) {
+                part = part.trim();
+                
+                if (part.startsWith("\"") && part.endsWith("\"")) {
+                    // Es un string literal
+                    if (firstPart) {
+                        fstring.append(part, 0, part.length() - 1); // Quitar comilla final
+                        firstPart = false;
+                    } else {
+                        fstring.append(part.substring(1, part.length() - 1)); // Quitar ambas comillas
+                    }
+                } else {
+                    // Es una expresión
+                    if (firstPart) {
+                        fstring.append("\"");
+                        firstPart = false;
+                    }
+                    // Eliminar paréntesis externos innecesarios
+                    String expr = part;
+                    if (expr.startsWith("(") && expr.endsWith(")")) {
+                        expr = expr.substring(1, expr.length() - 1);
+                    }
+                    fstring.append("{").append(expr).append("}");
+                }
+            }
+            
+            // Cerrar el f-string
+            if (!firstPart) {
+                fstring.append("\"");
+            }
+            
+            return fstring.toString();
+        }
+        
+        // Si no es un patrón reconocido, retornar tal cual
+        return args;
     }
     
     /**
