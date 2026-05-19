@@ -455,7 +455,9 @@ public class EsJsVisitorImpl extends ControlFlowVisitor {
                     if (expr.startsWith("(") && expr.endsWith(")")) {
                         expr = expr.substring(1, expr.length() - 1);
                     }
-                    fstring.append("{").append(expr).append("}");
+                    fstring.append("{")
+                            .append(normalizeFStringExpression(expr))
+                            .append("}");
                 }
             }
             
@@ -469,6 +471,49 @@ public class EsJsVisitorImpl extends ControlFlowVisitor {
         
         // Si no es un patrón reconocido, retornar tal cual
         return args;
+    }
+
+    private String normalizeFStringExpression(String expr) {
+        StringBuilder out = new StringBuilder();
+        int i = 0;
+
+        while (i < expr.length()) {
+            char c = expr.charAt(i);
+            if (c != '"') {
+                out.append(c);
+                i++;
+                continue;
+            }
+
+            StringBuilder literal = new StringBuilder();
+            i++;
+            boolean escaped = false;
+            while (i < expr.length()) {
+                char current = expr.charAt(i);
+                if (escaped) {
+                    literal.append(current);
+                    escaped = false;
+                } else if (current == '\\') {
+                    literal.append(current);
+                    escaped = true;
+                } else if (current == '"') {
+                    break;
+                } else {
+                    literal.append(current);
+                }
+                i++;
+            }
+
+            out.append("'")
+                    .append(literal.toString().replace("'", "\\'"))
+                    .append("'");
+
+            if (i < expr.length() && expr.charAt(i) == '"') {
+                i++;
+            }
+        }
+
+        return out.toString();
     }
     
     /**
