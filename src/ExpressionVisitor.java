@@ -9,6 +9,7 @@ public abstract class ExpressionVisitor extends  EsJsBaseVisitor<String> {
     protected boolean needsMathLib            = false;
     protected boolean needsRandomLib          = false;
     protected boolean needsIndefinidoSentinel = false;
+    protected boolean needsJsLooseEq = false;
 
     protected int   indentLevel = 0;
     protected int   objCounter = 0;
@@ -328,15 +329,30 @@ public abstract class ExpressionVisitor extends  EsJsBaseVisitor<String> {
                         + " " + visit(sub.get(1));
 
             if (c1 instanceof EsJsParser.OperadorIgualdadContext) {
-                String op = visit(ctx.operadorIgualdad());
-                if ("is_same_type_and_eq".equals(op)) {
-                    return "(type(" + left + ") is type(" + visit(sub.get(1)) + ") and "
-                            + left + " == " + visit(sub.get(1)) + ")";
-                } else if ("not_same_type_and_eq".equals(op)) {
-                    return "not (type(" + left + ") is type(" + visit(sub.get(1)) + ") and "
-                            + left + " == " + visit(sub.get(1)) + ")";
-                } else {
-                    return left + " " + op + " " + visit(sub.get(1));
+                String op    = visit(ctx.operadorIgualdad());
+                String right = visit(sub.get(1));
+
+                switch (op) {
+                    case "is_same_type_and_eq":
+                        return "(type(" + left + ") is type(" + right + ") and "
+                                + left + " == " + right + ")";
+
+                    case "not_same_type_and_eq":
+                        return "not (type(" + left + ") is type(" + right + ") and "
+                                + left + " == " + right + ")";
+
+                    case "==":
+                        needsJsLooseEq      = true;
+                        needsIndefinidoSentinel = true;
+                        return "_js_eq(" + left + ", " + right + ")";
+
+                    case "!=":
+                        needsJsLooseEq      = true;
+                        needsIndefinidoSentinel = true;
+                        return "not _js_eq(" + left + ", " + right + ")";
+
+                    default:
+                        return left + " " + op + " " + right;
                 }
             }
 

@@ -52,8 +52,32 @@ public class EsJsVisitorImpl extends ControlFlowVisitor {
         if (needsSysLib)                imports.append("import sys\n");
         if (needsMathLib)               imports.append("import math\n");
         if (needsRandomLib)             imports.append("import random\n");
-        if (needsIndefinidoSentinel)    imports.append("_indefinido = object()\n\n");
         if (!imports.isEmpty())         imports.append("\n");
+
+        if (needsIndefinidoSentinel)    imports.append("_indefinido = object()\n\n");
+        if (needsJsLooseEq) {
+            imports.append(
+                    "def _js_eq(a, b):\n"
+                            + "    if a is None and b is _indefinido: return True\n"
+                            + "    if a is _indefinido and b is None: return True\n"
+
+                            + "    if a is None or a is _indefinido: return b is None or b is _indefinido\n"
+                            + "    if b is None or b is _indefinido: return False\n"
+
+                            + "    if type(a) is type(b): return a == b\n"
+
+                            + "    if isinstance(a, bool): return _js_eq(int(a), b)\n"
+                            + "    if isinstance(b, bool): return _js_eq(a, int(b))\n"
+
+                            + "    if isinstance(a, (int, float)) and isinstance(b, str):\n"
+                            + "        try: return a == float(b)\n"
+                            + "        except: return False\n"
+                            + "    if isinstance(b, (int, float)) and isinstance(a, str):\n"
+                            + "        try: return float(a) == b\n"
+                            + "        except: return False\n"
+                            + "    return a == b\n\n"
+            );
+        }
 
         return imports.toString();
     }
