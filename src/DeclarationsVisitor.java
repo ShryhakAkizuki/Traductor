@@ -23,8 +23,11 @@ public class DeclarationsVisitor extends EsJsVisitorImpl {
     public String visitListaDeclaracionVariable(
             EsJsParser.ListaDeclaracionVariableContext ctx) {
         StringBuilder sb = new StringBuilder();
+        boolean isVar = ctx.modificadorVariable() != null
+                && ctx.modificadorVariable().TKN_var() != null;
         for (EsJsParser.DeclaracionVariableContext decl : ctx.declaracionVariable()) {
             EsJsParser.ExpresionUnicaContext expr = decl.expresionUnica();
+            if (isVar && expr == null) continue;
             if (expr != null
                     && expr.funcionFlecha() != null
                     && expr.funcionFlecha().bloque() != null) {

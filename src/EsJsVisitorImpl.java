@@ -103,6 +103,83 @@ public class EsJsVisitorImpl extends ControlFlowVisitor {
     public int getErrorCount() {
         return errorCount;
     }
+
+    private EsJsParser.DeclaracionFuncionContext functionDeclaration(
+            EsJsParser.InstruccionContext ctx) {
+        return ctx != null && ctx.declaracionFuncion() != null
+                ? ctx.declaracionFuncion() : null;
+    }
+
+    private String functionDeclarationName(EsJsParser.InstruccionContext ctx) {
+        EsJsParser.DeclaracionFuncionContext fn = functionDeclaration(ctx);
+        return fn != null ? visit(fn.identificador()) : null;
+    }
+
+    private EsJsParser.ListaDeclaracionVariableContext variableDeclarationList(
+            EsJsParser.InstruccionContext ctx) {
+        return ctx != null && ctx.sentenciaVariable() != null
+                ? ctx.sentenciaVariable().listaDeclaracionVariable() : null;
+    }
+
+    private boolean isVarDeclaration(EsJsParser.ListaDeclaracionVariableContext ctx) {
+        return ctx != null
+                && ctx.modificadorVariable() != null
+                && ctx.modificadorVariable().TKN_var() != null;
+    }
+
+    private String buildHoistedInstructionList(
+            List<EsJsParser.InstruccionContext> instrucciones,
+            boolean emitPassWhenEmpty) {
+        if (instrucciones == null || instrucciones.isEmpty()) {
+            return emitPassWhenEmpty ? indent() + "pass\n" : "";
+        }
+
+        StringBuilder output = new StringBuilder();
+        Set<String> hoistedFunctions = new LinkedHashSet<>();
+        Set<String> hoistedVars = new LinkedHashSet<>();
+
+        for (EsJsParser.InstruccionContext instruction : instrucciones) {
+            String functionName = functionDeclarationName(instruction);
+            if (functionName != null) {
+                hoistedFunctions.add(functionName);
+                output.append(visit(instruction.declaracionFuncion()));
+            }
+        }
+
+        for (EsJsParser.InstruccionContext instruction : instrucciones) {
+            EsJsParser.ListaDeclaracionVariableContext vars =
+                    variableDeclarationList(instruction);
+            if (!isVarDeclaration(vars)) continue;
+
+            for (EsJsParser.DeclaracionVariableContext declaration :
+                    vars.declaracionVariable()) {
+                String name = visit(declaration.identificador());
+                if (!hoistedFunctions.contains(name)) hoistedVars.add(name);
+            }
+        }
+
+        if (!hoistedVars.isEmpty()) {
+            needsIndefinidoSentinel = true;
+            for (String name : hoistedVars) {
+                output.append(indent()).append(name)
+                        .append(" = _indefinido\n");
+            }
+        }
+
+        for (EsJsParser.InstruccionContext instruccion : instrucciones) {
+            if (functionDeclaration(instruccion) != null) continue;
+
+            String code = visit(instruccion);
+            if (code != null && !code.isBlank()) {
+                output.append(code);
+            }
+        }
+
+        if (output.isEmpty() && emitPassWhenEmpty) {
+            return indent() + "pass\n";
+        }
+        return output.toString();
+    }
     
     // ==================== GRUPO 1: ESTRUCTURA BASE ====================
     
@@ -125,17 +202,8 @@ public class EsJsVisitorImpl extends ControlFlowVisitor {
         StringBuilder output = new StringBuilder();
         
         try {
-            // Procesar todas las instrucciones
             List<EsJsParser.InstruccionContext> instrucciones = ctx.instruccion();
-            
-            if (instrucciones != null) {
-                for (EsJsParser.InstruccionContext instruccion : instrucciones) {
-                    String code = visit(instruccion);
-                    if (code != null && !code.isBlank()) {
-                        output.append(code);
-                    }
-                }
-            }
+            output.append(buildHoistedInstructionList(instrucciones, false));
             
             // Obtener definiciones pendientes (usa el método heredado de ExpressionVisitor)
             String definitions = flushPendientes();
@@ -218,6 +286,14 @@ public class EsJsVisitorImpl extends ControlFlowVisitor {
         }
         
         return output.toString();
+    }
+
+    @Override
+    protected String buildBlock(List<EsJsParser.InstruccionContext> instrucciones) {
+        indentLevel++;
+        String output = buildHoistedInstructionList(instrucciones, true);
+        indentLevel--;
+        return output;
     }
     
     /**
