@@ -49,7 +49,7 @@ public class Main {
         }
 
         // ── 3. Traducción ────────────────────────────────────────────────
-        EsJsVisitorImpl translator = new EsJsVisitorImpl();
+        DeclarationsVisitor translator = new DeclarationsVisitor();
         String python = translator.visit(tree);
 
         // ── 4. Salida ────────────────────────────────────────────────────

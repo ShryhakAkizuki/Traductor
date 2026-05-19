@@ -14,7 +14,7 @@ import java.util.*;
  * @author Equipo de Desarrollo
  * @version 1.0.0
  */
-public class EsJsVisitorImpl extends ControlFlowVisitor {
+public abstract class EsJsVisitorImpl extends ControlFlowVisitor {
     
     // ==================== VARIABLES ADICIONALES ====================
     
