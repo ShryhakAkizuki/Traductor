@@ -1,4 +1,5 @@
 import org.antlr.v4.runtime.tree.ParseTree;
+import java.util.*;
 
 /**
  * Implementación del Visitor para traducir EsJs a Python.

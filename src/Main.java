@@ -1,13 +1,58 @@
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
-void main() {
-    //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-    // to see how IntelliJ IDEA suggests fixing it.
-    IO.println(String.format("Hello and welcome!"));
+import org.antlr.v4.runtime.*;
+import org.antlr.v4.runtime.tree.*;
 
-    for (int i = 1; i <= 5; i++) {
-        //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-        // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-        IO.println("i = " + i);
+public class Main {
+    public static void main(String[] args) throws Exception {
+        if (args.length == 0) {
+            System.err.println("Uso: java Main <archivo.esjs>");
+            System.exit(1);
+        }
+
+        // ── 1. Análisis léxico ───────────────────────────────────────────
+        CharStream input = CharStreams.fromFileName(args[0]);
+        EsJsLexer  lexer = new EsJsLexer(input);
+
+        // Capturar errores léxicos
+        lexer.removeErrorListeners();
+        lexer.addErrorListener(new BaseErrorListener() {
+            @Override
+            public void syntaxError(Recognizer<?,?> rec, Object sym,
+                                    int line, int col,
+                                    String msg, RecognitionException e) {
+                System.err.printf("[Error Léxico]  línea %d:%d  %s%n",
+                        line, col, msg);
+            }
+        });
+
+        // ── 2. Análisis sintáctico ───────────────────────────────────────
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+        EsJsParser        parser = new EsJsParser(tokens);
+
+        parser.removeErrorListeners();
+        final boolean[] hasError = {false};
+        parser.addErrorListener(new BaseErrorListener() {
+            @Override
+            public void syntaxError(Recognizer<?,?> rec, Object sym,
+                                    int line, int col,
+                                    String msg, RecognitionException e) {
+                hasError[0] = true;
+                System.err.printf("[Error Sintáctico]  línea %d:%d  %s%n",
+                        line, col, msg);
+            }
+        });
+
+        ParseTree tree = parser.s();   // regla raíz
+
+        if (hasError[0]) {
+            System.err.println("Traducción cancelada por errores sintácticos.");
+            System.exit(2);
+        }
+
+        // ── 3. Traducción ────────────────────────────────────────────────
+        EsJsVisitorImpl translator = new EsJsVisitorImpl();
+        String python = translator.visit(tree);
+
+        // ── 4. Salida ────────────────────────────────────────────────────
+        System.out.print(python);
     }
 }
