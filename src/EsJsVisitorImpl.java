@@ -50,7 +50,7 @@ public class EsJsVisitorImpl extends ControlFlowVisitor {
         if (needsSysLib)                imports.append("import sys\n");
         if (needsMathLib)               imports.append("import math\n");
         if (needsRandomLib)             imports.append("import random\n");
-        if (!imports.isEmpty())         imports.append("\n");
+        if (imports.length() > 0)       imports.append("\n");
 
         if (needsIndefinidoSentinel)    imports.append("_indefinido = object()\n\n");
         if (needsJsLooseEq) {
@@ -170,12 +170,12 @@ public class EsJsVisitorImpl extends ControlFlowVisitor {
             if (functionDeclaration(instruccion) != null) continue;
 
             String code = visit(instruccion);
-            if (code != null && !code.isBlank()) {
+            if (code != null && !code.trim().isEmpty()) {
                 output.append(code);
             }
         }
 
-        if (output.isEmpty() && emitPassWhenEmpty) {
+        if (output.length() == 0 && emitPassWhenEmpty) {
             return indent() + "pass\n";
         }
         return output.toString();
@@ -275,7 +275,7 @@ public class EsJsVisitorImpl extends ControlFlowVisitor {
                 // Procesar cada instrucción sin cambiar indentación
                 for (EsJsParser.InstruccionContext instruccion : instrucciones) {
                     String code = visit(instruccion);
-                    if (code != null && !code.isBlank()) {
+                    if (code != null && !code.trim().isEmpty()) {
                         output.append(code);
                     }
                 }

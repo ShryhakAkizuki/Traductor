@@ -6,9 +6,25 @@ public abstract class ControlFlowVisitor extends ExpressionVisitor {
 
     private int switchCounter = 0;
 
-    private record SwitchEntry(String condition, List<EsJsParser.InstruccionContext> instructions) {
+    private static class SwitchEntry {
+        private final String condition;
+        private final List<EsJsParser.InstruccionContext> instructions;
+
+        private SwitchEntry(String condition, List<EsJsParser.InstruccionContext> instructions) {
+            this.condition = condition;
+            this.instructions = instructions;
+        }
+
         boolean isDefault() {
             return condition == null;
+        }
+
+        String condition() {
+            return condition;
+        }
+
+        List<EsJsParser.InstruccionContext> instructions() {
+            return instructions;
         }
     }
 
@@ -18,7 +34,7 @@ public abstract class ControlFlowVisitor extends ExpressionVisitor {
         StringBuilder output = new StringBuilder();
         for (EsJsParser.InstruccionContext instruction : instructions) {
             String code = visit(instruction);
-            if (code != null && !code.isBlank()) {
+            if (code != null && !code.trim().isEmpty()) {
                 output.append(code);
                 if (!code.endsWith("\n")) output.append("\n");
             }
@@ -84,12 +100,14 @@ public abstract class ControlFlowVisitor extends ExpressionVisitor {
     }
 
     private List<SwitchEntry> switchEntries(EsJsParser.BloqueCasoContext ctx) {
-        List<SwitchEntry> entries = new ArrayList<>();
+        List<SwitchEntry> entries = new ArrayList<SwitchEntry>();
         for (int i = 0; i < ctx.getChildCount(); i++) {
             ParseTree child = ctx.getChild(i);
-            if (child instanceof EsJsParser.CasoSTMTContext caseCtx) {
+            if (child instanceof EsJsParser.CasoSTMTContext) {
+                EsJsParser.CasoSTMTContext caseCtx = (EsJsParser.CasoSTMTContext) child;
                 entries.add(new SwitchEntry(visit(caseCtx.secuenciaExpresiones()), caseCtx.instruccion()));
-            } else if (child instanceof EsJsParser.CasoDefectoContext defaultCtx) {
+            } else if (child instanceof EsJsParser.CasoDefectoContext) {
+                EsJsParser.CasoDefectoContext defaultCtx = (EsJsParser.CasoDefectoContext) child;
                 entries.add(new SwitchEntry(null, defaultCtx.instruccion()));
             }
         }
@@ -97,7 +115,7 @@ public abstract class ControlFlowVisitor extends ExpressionVisitor {
     }
 
     private String anyCaseMatches(String valueName, List<SwitchEntry> entries) {
-        List<String> conditions = new ArrayList<>();
+        List<String> conditions = new ArrayList<String>();
         for (SwitchEntry entry : entries) {
             if (!entry.isDefault()) conditions.add(valueName + " == " + entry.condition());
         }
@@ -146,7 +164,7 @@ public abstract class ControlFlowVisitor extends ExpressionVisitor {
         indentLevel++;
         String body = emitInstructions(ctx.bloque().instruccion());
         String update = visitActualizacionFor(ctx.actualizacionFor());
-        if (body.isBlank() && update.isBlank()) {
+        if (body.trim().isEmpty() && update.trim().isEmpty()) {
             output.append(indent()).append("pass\n");
         } else {
             output.append(body).append(update);
@@ -197,15 +215,18 @@ public abstract class ControlFlowVisitor extends ExpressionVisitor {
         String anyCase = anyCaseMatches(valueName, entries);
 
         for (SwitchEntry entry : entries) {
-            String condition = entry.isDefault()
-                    ? matchedName + " or not (" + anyCase + ")"
-                    : matchedName + " or " + valueName + " == " + entry.condition();
+            String condition;
+            if (entry.isDefault()) {
+                condition = matchedName + " or not (" + anyCase + ")";
+            } else {
+                condition = matchedName + " or " + valueName + " == " + entry.condition();
+            }
 
             output.append(indent()).append("if ").append(condition).append(":\n");
             indentLevel++;
             output.append(indent()).append(matchedName).append(" = True\n");
             String body = emitInstructions(entry.instructions());
-            if (body.isBlank()) body = indent() + "pass\n";
+            if (body.trim().isEmpty()) body = indent() + "pass\n";
             output.append(body);
             indentLevel--;
         }

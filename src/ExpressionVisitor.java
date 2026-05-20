@@ -17,7 +17,13 @@ public abstract class ExpressionVisitor extends  EsJsBaseVisitor<String> {
 
     // ------------------------- Funciones -------------------------
 
-    protected String indent() { return "    ".repeat(indentLevel); }
+    protected String indent() {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < indentLevel; i++) {
+            sb.append("    ");
+        }
+        return sb.toString();
+    }
 
     protected boolean isToken(ParseTree node, int type) {
         return node instanceof TerminalNode
@@ -36,8 +42,8 @@ public abstract class ExpressionVisitor extends  EsJsBaseVisitor<String> {
         List<EsJsParser.ExpresionUnicaContext> sub = ctx.expresionUnica();
         if (!sub.isEmpty()) {
             ParseTree c1 = ctx.getChild(1);
-            if (isToken(c1, EsJsLexer.TKN_increment)) return visit(sub.getFirst()) + " += 1";
-            if (isToken(c1, EsJsLexer.TKN_decrement)) return visit(sub.getFirst()) + " -= 1";
+            if (isToken(c1, EsJsLexer.TKN_increment)) return visit(sub.get(0)) + " += 1";
+            if (isToken(c1, EsJsLexer.TKN_decrement)) return visit(sub.get(0)) + " -= 1";
         }
         return visit(ctx);
     }
@@ -88,57 +94,90 @@ public abstract class ExpressionVisitor extends  EsJsBaseVisitor<String> {
 
     private String translateNumeroMethod(String metodo, String args) {
         needsMathLib = true;
-        return switch (metodo) {
-            case "interpretarDecimal" -> "float(" + args + ")";
-            case "interpretarEntero" -> "int(" + args + ")";
-            case "esFinito" -> "math.isfinite(" + args + ")";
-            case "esEntero" -> "(isinstance(" + args + ", int)"
+        if ("interpretarDecimal".equals(metodo)) {
+            return "float(" + args + ")";
+        } else if ("interpretarEntero".equals(metodo)) {
+            return "int(" + args + ")";
+        } else if ("esFinito".equals(metodo)) {
+            return "math.isfinite(" + args + ")";
+        } else if ("esEntero".equals(metodo)) {
+            return "(isinstance(" + args + ", int)"
                     + " or float(" + args + ").is_integer())";
-            case "esEnteroSeguro" -> "(-9007199254740991 <= (" + args + ") <= 9007199254740991)";
-            case "NeN" -> "math.isnan(" + args + ")";
-            default -> args;
-        };
+        } else if ("esEnteroSeguro".equals(metodo)) {
+            return "(-9007199254740991 <= (" + args + ") <= 9007199254740991)";
+        } else if ("NeN".equals(metodo)) {
+            return "math.isnan(" + args + ")";
+        }
+        return args;
     }
 
     private String translateMateMethod(String metodo, String args) {
         needsMathLib = true;
-        return switch (metodo) {
-            case "absoluto" -> "abs(" + args + ")";
-            case "raizCuadrada" -> "math.sqrt(" + args + ")";
-            case "raizCubica" -> "(" + args + ") ** (1/3)";
-            case "potencia" -> "math.pow(" + args + ")";
-            case "maximo" -> "max(" + args + ")";
-            case "minimo" -> "min(" + args + ")";
-            case "redondear" -> "round(" + args + ")";
-            case "floor", "redondearHaciaAbajo" -> "math.floor(" + args + ")";
-            case "redondearHaciaArriba" -> "math.ceil(" + args + ")";
-            case "truncar" -> "math.trunc(" + args + ")";
-            case "aleatorio" -> {
-                needsRandomLib = true;
-                yield "random.random()";
-            }
-            case "seno" -> "math.sin(" + args + ")";
-            case "coseno" -> "math.cos(" + args + ")";
-            case "tangente" -> "math.tan(" + args + ")";
-            case "arcoseno" -> "math.asin(" + args + ")";
-            case "arcocoseno" -> "math.acos(" + args + ")";
-            case "arcotangente" -> "math.atan(" + args + ")";
-            case "arcotangente2" -> "math.atan2(" + args + ")";
-            case "logaritmo" -> "math.log(" + args + ")";
-            case "logaritmoBase10" -> "math.log10(" + args + ")";
-            case "logaritmoBase2" -> "math.log2(" + args + ")";
-            case "logaritmoDe1Mas" -> "math.log1p(" + args + ")";
-            case "exponencialMate" -> "math.exp(" + args + ")";
-            case "senoHiperbolico" -> "math.sinh(" + args + ")";
-            case "cosenoHiperbolico" -> "math.cosh(" + args + ")";
-            case "tangenteHiperbolica" -> "math.tanh(" + args + ")";
-            case "arcosenoHiperbolico" -> "math.asinh(" + args + ")";
-            case "arcocosenoHiperbolico" -> "math.acosh(" + args + ")";
-            case "arcotangenteHiperbolica" -> "math.atanh(" + args + ")";
-            case "signo" -> "math.copysign(1, " + args + ")";
-            case "hipotenusa" -> "math.hypot(" + args + ")";
-            default -> "math." + metodo + "(" + args + ")";
-        };
+        if ("absoluto".equals(metodo)) {
+            return "abs(" + args + ")";
+        } else if ("raizCuadrada".equals(metodo)) {
+            return "math.sqrt(" + args + ")";
+        } else if ("raizCubica".equals(metodo)) {
+            return "(" + args + ") ** (1/3)";
+        } else if ("potencia".equals(metodo)) {
+            return "math.pow(" + args + ")";
+        } else if ("maximo".equals(metodo)) {
+            return "max(" + args + ")";
+        } else if ("minimo".equals(metodo)) {
+            return "min(" + args + ")";
+        } else if ("redondear".equals(metodo)) {
+            return "round(" + args + ")";
+        } else if ("floor".equals(metodo) || "redondearHaciaAbajo".equals(metodo)) {
+            return "math.floor(" + args + ")";
+        } else if ("redondearHaciaArriba".equals(metodo)) {
+            return "math.ceil(" + args + ")";
+        } else if ("truncar".equals(metodo)) {
+            return "math.trunc(" + args + ")";
+        } else if ("aleatorio".equals(metodo)) {
+            needsRandomLib = true;
+            return "random.random()";
+        } else if ("seno".equals(metodo)) {
+            return "math.sin(" + args + ")";
+        } else if ("coseno".equals(metodo)) {
+            return "math.cos(" + args + ")";
+        } else if ("tangente".equals(metodo)) {
+            return "math.tan(" + args + ")";
+        } else if ("arcoseno".equals(metodo)) {
+            return "math.asin(" + args + ")";
+        } else if ("arcocoseno".equals(metodo)) {
+            return "math.acos(" + args + ")";
+        } else if ("arcotangente".equals(metodo)) {
+            return "math.atan(" + args + ")";
+        } else if ("arcotangente2".equals(metodo)) {
+            return "math.atan2(" + args + ")";
+        } else if ("logaritmo".equals(metodo)) {
+            return "math.log(" + args + ")";
+        } else if ("logaritmoBase10".equals(metodo)) {
+            return "math.log10(" + args + ")";
+        } else if ("logaritmoBase2".equals(metodo)) {
+            return "math.log2(" + args + ")";
+        } else if ("logaritmoDe1Mas".equals(metodo)) {
+            return "math.log1p(" + args + ")";
+        } else if ("exponencialMate".equals(metodo)) {
+            return "math.exp(" + args + ")";
+        } else if ("senoHiperbolico".equals(metodo)) {
+            return "math.sinh(" + args + ")";
+        } else if ("cosenoHiperbolico".equals(metodo)) {
+            return "math.cosh(" + args + ")";
+        } else if ("tangenteHiperbolica".equals(metodo)) {
+            return "math.tanh(" + args + ")";
+        } else if ("arcosenoHiperbolico".equals(metodo)) {
+            return "math.asinh(" + args + ")";
+        } else if ("arcocosenoHiperbolico".equals(metodo)) {
+            return "math.acosh(" + args + ")";
+        } else if ("arcotangenteHiperbolica".equals(metodo)) {
+            return "math.atanh(" + args + ")";
+        } else if ("signo".equals(metodo)) {
+            return "math.copysign(1, " + args + ")";
+        } else if ("hipotenusa".equals(metodo)) {
+            return "math.hypot(" + args + ")";
+        }
+        return "math." + metodo + "(" + args + ")";
     }
 
     private String buildObjectClass(List<EsJsParser.PropiedadContext> props) {
@@ -248,10 +287,10 @@ public abstract class ExpressionVisitor extends  EsJsBaseVisitor<String> {
             return visit(ctx.restoCrear());
 
         if (ctx.TKN_tipoDe() != null)
-            return "type(" + visit(sub.getFirst()) + ").__name__";
+            return "type(" + visit(sub.get(0)) + ").__name__";
 
         if (ctx.operadorUnario() != null)
-            return visit(ctx.operadorUnario()) + visit(sub.getFirst());
+            return visit(ctx.operadorUnario()) + visit(sub.get(0));
 
         if (ctx.TKN_Mate() != null)
             return visitMateExpr(ctx.tipoMetodoMate());
@@ -269,7 +308,7 @@ public abstract class ExpressionVisitor extends  EsJsBaseVisitor<String> {
             return "(" + visit(sub.get(0)) + ")";
 
         if (!sub.isEmpty()) {
-            String left = visit(sub.getFirst());
+            String left = visit(sub.get(0));
             ParseTree  c1   = ctx.getChild(1);
 
             if (isToken(c1, EsJsLexer.TKN_increment)) return left + " + 1";
@@ -401,14 +440,13 @@ public abstract class ExpressionVisitor extends  EsJsBaseVisitor<String> {
 
     @Override
     public String visitConstanteNumero(EsJsParser.ConstanteNumeroContext ctx) {
-        return switch (ctx.getText()) {
-            case "MAX_VALUE" -> "1.7976931348623157e+308";
-            case "MIN_VALUE" -> "5e-324";
-            case "POSITIVE_INFINITY" -> "float('inf')";
-            case "NEGATIVE_INFINITY" -> "float('-inf')";
-            case "NeN" -> "float('nan')";
-            default -> "float('nan')";
-        };
+        String text = ctx.getText();
+        if ("MAX_VALUE".equals(text)) return "1.7976931348623157e+308";
+        if ("MIN_VALUE".equals(text)) return "5e-324";
+        if ("POSITIVE_INFINITY".equals(text)) return "float('inf')";
+        if ("NEGATIVE_INFINITY".equals(text)) return "float('-inf')";
+        if ("NeN".equals(text)) return "float('nan')";
+        return "float('nan')";
     }
 
     @Override
@@ -431,17 +469,16 @@ public abstract class ExpressionVisitor extends  EsJsBaseVisitor<String> {
     @Override
     public String visitConstanteMate(EsJsParser.ConstanteMateContext ctx) {
         needsMathLib = true;
-        return switch (ctx.getText()) {
-            case "PI" -> "math.pi";
-            case "E" -> "math.e";
-            case "LN2" -> "math.log(2)";
-            case "LN10" -> "math.log(10)";
-            case "LOG2E" -> "math.log2(math.e)";
-            case "LOG10E" -> "math.log10(math.e)";
-            case "SQRT2" -> "math.sqrt(2)";
-            case "SQRT1_2" -> "math.sqrt(0.5)";
-            default -> "math." + ctx.getText().toLowerCase();
-        };
+        String text = ctx.getText();
+        if ("PI".equals(text)) return "math.pi";
+        if ("E".equals(text)) return "math.e";
+        if ("LN2".equals(text)) return "math.log(2)";
+        if ("LN10".equals(text)) return "math.log(10)";
+        if ("LOG2E".equals(text)) return "math.log2(math.e)";
+        if ("LOG10E".equals(text)) return "math.log10(math.e)";
+        if ("SQRT2".equals(text)) return "math.sqrt(2)";
+        if ("SQRT1_2".equals(text)) return "math.sqrt(0.5)";
+        return "math." + ctx.getText().toLowerCase();
     }
 
     @Override
@@ -498,11 +535,9 @@ public abstract class ExpressionVisitor extends  EsJsBaseVisitor<String> {
     @Override
     public String visitOperadorIgualdad(EsJsParser.OperadorIgualdadContext ctx) {
         String op = ctx.getText();
-        return switch (op) {
-            case "===" -> "is_same_type_and_eq";
-            case "!==" -> "not_same_type_and_eq";
-            default    -> op;   // "==" o "!=" normales
-        };
+        if ("===".equals(op)) return "is_same_type_and_eq";
+        if ("!==".equals(op)) return "not_same_type_and_eq";
+        return op;
     }
 
     @Override
@@ -512,12 +547,11 @@ public abstract class ExpressionVisitor extends  EsJsBaseVisitor<String> {
 
     @Override
     public String visitOperadorUnario(EsJsParser.OperadorUnarioContext ctx) {
-        return switch (ctx.getText()) {
-            case "!" -> "not ";
-            case "-" -> "-";
-            case "+" -> "+";
-            default -> "";
-        };
+        String text = ctx.getText();
+        if ("!".equals(text)) return "not ";
+        if ("-".equals(text)) return "-";
+        if ("+".equals(text)) return "+";
+        return "";
     }
 
     @Override
