@@ -1,6 +1,12 @@
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.*;
 
+/**
+ * Implementación del Visitor para traducir EsJs a Python.
+ * Integrantes:
+ * - Oscar Leonardo Riveros Perez
+ */
+
 public class Main {
     public static void main(String[] args) throws Exception {
         if (args.length == 0) {
